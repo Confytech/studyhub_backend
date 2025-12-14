@@ -1,9 +1,11 @@
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from django.http import JsonResponse
 
-@api_view(['GET'])
 def home(request):
-    return Response({
-        "message": "StudyHub API is running 🚀"
+    return JsonResponse({
+        "message": "Welcome to Confidence StudyHub!",
+        "endpoints": {
+            "users": "/api/users/",
+            "study": "/api/study/",
+            "payments": "/api/payments/"
+        }
     })
-
