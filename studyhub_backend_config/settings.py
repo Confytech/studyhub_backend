@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'import_export',   # ✅ ENABLE IMPORT / EXPORT
 
     # Local apps
     'apps.users',
@@ -41,7 +42,7 @@ INSTALLED_APPS = [
 # MIDDLEWARE
 # ----------------------------------
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',   # CORS HEADER (Must be first)
+    'corsheaders.middleware.CorsMiddleware',   # Must be first
 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -55,7 +56,7 @@ MIDDLEWARE = [
 # ----------------------------------
 # CORS SETTINGS
 # ----------------------------------
-CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins (React frontend friendly)
+CORS_ALLOW_ALL_ORIGINS = True  # React / frontend friendly
 
 # ----------------------------------
 # URL CONFIG
@@ -126,7 +127,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 # ----------------------------------
-# DJANGO REST FRAMEWORK (DRF)
+# DJANGO REST FRAMEWORK
 # ----------------------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
