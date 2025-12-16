@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    .card { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<h1>Student Dashboard</h1>
+
+<div class="card">
+  <h2>Coins</h2>
+  <p id="coins">Loading...</p>
+</div>
+
+<div class="card">
+  <h2>Quiz Attempts</h2>
+  <ul id="attempts"></ul>
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000/api";
+const token = localStorage.getItem("access");
+
+fetch(`${API}/users/me/`, {
+  headers: { Authorization: `Bearer ${token}` }
+})
+.then(res => res.json())
+.then(user => {
+  document.getElementById("coins").textContent = user.coins;
+});
+
+fetch(`${API}/study/attempts/`, {
+  headers: { Authorization: `Bearer ${token}` }
+})
+.then(res => res.json())
+.then(attempts => {
+  const list = document.getElementById("attempts");
+  attempts.forEach(a => {
+    const li = document.createElement("li");
+    li.textContent = `Quiz ${a.quiz} → ${a.is_correct ? "✔" : "✘"}`;
+    list.appendChild(li);
+  });
+});
+</script>
+
+</body>
+</html>
+

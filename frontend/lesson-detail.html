@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Lesson Details</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    .quiz { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+    button { margin-top: 5px; }
+  </style>
+</head>
+<body>
+
+<h1 id="lesson-title">Lesson</h1>
+<p id="lesson-content"></p>
+
+<h2>Quizzes</h2>
+<div id="quiz-list"></div>
+
+<script>
+const API = "http://127.0.0.1:8000/api";
+const token = localStorage.getItem("access");
+const params = new URLSearchParams(window.location.search);
+const lessonId = params.get("id");
+
+if (!token || !lessonId) {
+  alert("Missing token or lesson ID");
+}
+
+fetch(`${API}/study/lessons/${lessonId}/`, {
+  headers: { Authorization: `Bearer ${token}` }
+})
+.then(res => res.json())
+.then(data => {
+  document.getElementById("lesson-title").textContent = data.title;
+  document.getElementById("lesson-content").textContent = data.content;
+
+  const quizList = document.getElementById("quiz-list");
+
+  data.quizzes.forEach(q => {
+    const div = document.createElement("div");
+    div.className = "quiz";
+    div.innerHTML = `
+      <p><strong>${q.question}</strong></p>
+      <p>${q.is_premium ? "🔒 Premium Quiz" : "Free Quiz"}</p>
+      <button onclick="startQuiz(${q.id})">Take Quiz</button>
+    `;
+    quizList.appendChild(div);
+  });
+});
+
+function startQuiz(quizId) {
+  window.location.href = `quiz.html?id=${quizId}`;
+}
+</script>
+
+</body>
+</html>
+
