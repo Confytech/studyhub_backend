@@ -4,8 +4,9 @@
   <title>Lesson Details</title>
   <style>
     body { font-family: Arial; padding: 20px; }
-    .quiz { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
-    button { margin-top: 5px; }
+    .quiz { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 6px; }
+    button { margin-top: 5px; padding: 6px 12px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
   </style>
 </head>
 <body>
@@ -18,35 +19,45 @@
 
 <script>
 const API = "http://127.0.0.1:8000/api";
-const token = localStorage.getItem("access");
+const token = localStorage.getItem("accessToken"); // match login page
 const params = new URLSearchParams(window.location.search);
-const lessonId = params.get("id");
+const lessonId = params.get("lesson"); // key must match lessons.html
 
 if (!token || !lessonId) {
-  alert("Missing token or lesson ID");
+  window.location.href = "index.html";
 }
 
 fetch(`${API}/study/lessons/${lessonId}/`, {
-  headers: { Authorization: `Bearer ${token}` }
+  headers: { "Authorization": `Bearer ${token}` }
 })
-.then(res => res.json())
+.then(res => {
+  if (!res.ok) throw new Error("Failed to fetch lesson details");
+  return res.json();
+})
 .then(data => {
   document.getElementById("lesson-title").textContent = data.title;
   document.getElementById("lesson-content").textContent = data.content;
 
   const quizList = document.getElementById("quiz-list");
+  quizList.innerHTML = "";
+
+  if (!data.quizzes || data.quizzes.length === 0) {
+    quizList.innerHTML = "<p>No quizzes available for this lesson.</p>";
+    return;
+  }
 
   data.quizzes.forEach(q => {
     const div = document.createElement("div");
     div.className = "quiz";
     div.innerHTML = `
       <p><strong>${q.question}</strong></p>
-      <p>${q.is_premium ? "🔒 Premium Quiz" : "Free Quiz"}</p>
+      <p>${q.is_premium ? `🔒 Premium Quiz (Cost: ${q.coin_cost} coins)` : "Free Quiz"}</p>
       <button onclick="startQuiz(${q.id})">Take Quiz</button>
     `;
     quizList.appendChild(div);
   });
-});
+})
+.catch(err => alert(err.message));
 
 function startQuiz(quizId) {
   window.location.href = `quiz.html?id=${quizId}`;

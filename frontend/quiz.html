@@ -1,67 +1,151 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Quiz</title>
+  <meta charset="UTF-8" />
+  <title>StudyHub – Quiz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <style>
-    body { font-family: Arial; padding: 20px; }
-    label { display: block; margin: 5px 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      padding: 20px;
+    }
+    .quiz-box {
+      background: white;
+      padding: 20px;
+      max-width: 600px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin: 8px 0;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 16px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .correct { color: green; font-weight: bold; }
+    .wrong { color: red; font-weight: bold; }
+    .premium { color: #dc2626; font-weight: bold; }
   </style>
 </head>
 <body>
 
-<h1 id="question">Loading...</h1>
+<a href="lessons.html">← Back to Lessons</a>
 
-<form id="quiz-form">
-  <label><input type="radio" name="option" value="A"> <span id="a"></span></label>
-  <label><input type="radio" name="option" value="B"> <span id="b"></span></label>
-  <label><input type="radio" name="option" value="C"> <span id="c"></span></label>
-  <label><input type="radio" name="option" value="D"> <span id="d"></span></label>
-  <button type="submit">Submit</button>
-</form>
+<h1>📝 Quiz</h1>
 
-<p id="result"></p>
+<div class="quiz-box">
+  <p id="question">Loading quiz...</p>
+  <p id="premium"></p>
+
+  <form id="quiz-form">
+    <label><input type="radio" name="option" value="A"> <span id="a"></span></label>
+    <label><input type="radio" name="option" value="B"> <span id="b"></span></label>
+    <label><input type="radio" name="option" value="C"> <span id="c"></span></label>
+    <label><input type="radio" name="option" value="D"> <span id="d"></span></label>
+
+    <button type="submit">Submit Answer</button>
+  </form>
+
+  <p id="result"></p>
+</div>
 
 <script>
 const API = "http://127.0.0.1:8000/api";
-const token = localStorage.getItem("access");
+const accessToken = localStorage.getItem("access_token");
 const params = new URLSearchParams(window.location.search);
-const quizId = params.get("id");
+const quizId = params.get("quiz");
 
-fetch(`${API}/study/lessons/`, {
-  headers: { Authorization: `Bearer ${token}` }
-})
-.then(res => res.json())
-.then(lessons => {
-  for (const lesson of lessons) {
-    const quiz = lesson.quizzes.find(q => q.id == quizId);
-    if (quiz) {
-      document.getElementById("question").textContent = quiz.question;
-      document.getElementById("a").textContent = quiz.option_a;
-      document.getElementById("b").textContent = quiz.option_b;
-      document.getElementById("c").textContent = quiz.option_c;
-      document.getElementById("d").textContent = quiz.option_d;
-    }
-  }
-});
+// 🔐 Auth guard
+if (!accessToken) {
+  window.location.href = "index.html";
+}
 
-document.getElementById("quiz-form").addEventListener("submit", e => {
-  e.preventDefault();
-  const selected = document.querySelector("input[name='option']:checked");
-  if (!selected) return alert("Select an option");
+if (!quizId) {
+  alert("Quiz ID missing");
+  window.location.href = "lessons.html";
+}
 
-  fetch(`${API}/study/quizzes/${quizId}/submit/`, {
-    method: "POST",
+// --------------------
+// Load quiz
+// --------------------
+async function loadQuiz() {
+  const res = await fetch(`${API}/study/quizzes/${quizId}/`, {
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ selected_option: selected.value })
-  })
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById("result").textContent =
-      data.is_correct ? "✅ Correct!" : "❌ Wrong!";
+      Authorization: `Bearer ${accessToken}`
+    }
   });
+
+  if (res.status === 401) {
+    localStorage.removeItem("access_token");
+    window.location.href = "index.html";
+    return;
+  }
+
+  const quiz = await res.json();
+
+  document.getElementById("question").textContent = quiz.question;
+  document.getElementById("a").textContent = quiz.option_a;
+  document.getElementById("b").textContent = quiz.option_b;
+  document.getElementById("c").textContent = quiz.option_c;
+  document.getElementById("d").textContent = quiz.option_d;
+
+  if (quiz.is_premium) {
+    document.getElementById("premium").textContent =
+      `🔒 Premium Quiz – Costs ${quiz.coin_cost} coins`;
+    document.getElementById("premium").className = "premium";
+  }
+}
+
+loadQuiz();
+
+// --------------------
+// Submit quiz
+// --------------------
+document.getElementById("quiz-form").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const selected = document.querySelector("input[name='option']:checked");
+  if (!selected) {
+    alert("Select an option");
+    return;
+  }
+
+  const res = await fetch(
+    `${API}/study/quizzes/${quizId}/submit/`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        selected_option: selected.value
+      })
+    }
+  );
+
+  const data = await res.json();
+  const result = document.getElementById("result");
+
+  if (data.is_correct) {
+    result.textContent = "✅ Correct!";
+    result.className = "correct";
+  } else {
+    result.textContent = "❌ Wrong!";
+    result.className = "wrong";
+  }
 });
 </script>
 

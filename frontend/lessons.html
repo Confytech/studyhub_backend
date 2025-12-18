@@ -11,22 +11,60 @@
       background: #f5f7fa;
       padding: 20px;
     }
+
     h1 {
       color: #1e293b;
+      margin-bottom: 20px;
     }
+
     .lesson {
       background: white;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border-radius: 8px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      border-left: 5px solid #2563eb;
     }
+
+    .lesson.premium {
+      border-left-color: #f59e0b;
+    }
+
     .lesson h3 {
-      margin: 0 0 8px;
+      margin: 0 0 6px;
+      color: #111827;
     }
+
+    .meta {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-left: 8px;
+    }
+
+    .free {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .premium-badge {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
     .lesson p {
-      color: #555;
+      color: #374151;
+      margin-bottom: 12px;
     }
+
     button {
       padding: 8px 14px;
       border: none;
@@ -34,12 +72,21 @@
       color: white;
       border-radius: 4px;
       cursor: pointer;
+      font-size: 14px;
     }
+
     button:hover {
       background: #1d4ed8;
     }
+
     .error {
       color: red;
+      margin-top: 20px;
+    }
+
+    .empty {
+      color: #6b7280;
+      font-style: italic;
       margin-top: 20px;
     }
   </style>
@@ -54,7 +101,7 @@
 
   <script>
     const API_BASE = "http://127.0.0.1:8000/api";
-    const accessToken = localStorage.getItem("accessToken"); // updated key to match login page
+    const accessToken = localStorage.getItem("accessToken");
 
     if (!accessToken) {
       window.location.href = "index.html";
@@ -70,28 +117,46 @@
         });
 
         if (response.status === 401) {
-          // Token missing/expired → redirect to login
           localStorage.removeItem("accessToken");
           window.location.href = "index.html";
           return;
         }
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || "Failed to load lessons");
+          throw new Error("Failed to load lessons");
         }
 
         const lessons = await response.json();
         const container = document.getElementById("lessons");
         container.innerHTML = "";
 
+        if (lessons.length === 0) {
+          container.innerHTML = `<p class="empty">No lessons available yet.</p>`;
+          return;
+        }
+
         lessons.forEach(lesson => {
           const div = document.createElement("div");
-          div.className = "lesson";
+          div.className = `lesson ${lesson.is_premium ? "premium" : ""}`;
+
+          const badge = lesson.is_premium
+            ? `<span class="badge premium-badge">Premium</span>`
+            : `<span class="badge free">Free</span>`;
 
           div.innerHTML = `
-            <h3>${lesson.title}</h3>
-            <p>${lesson.content.substring(0, 120)}...</p>
+            <h3>
+              ${lesson.title}
+              ${badge}
+            </h3>
+
+            <div class="meta">
+              Topic: ${lesson.topic_title || "General"}
+            </div>
+
+            <p>
+              ${(lesson.content || "").slice(0, 140)}${lesson.content && lesson.content.length > 140 ? "..." : ""}
+            </p>
+
             <button onclick="openLesson(${lesson.id})">
               View Lesson
             </button>
