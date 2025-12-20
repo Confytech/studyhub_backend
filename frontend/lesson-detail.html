@@ -4,8 +4,21 @@
   <title>Lesson Details</title>
   <style>
     body { font-family: Arial; padding: 20px; }
-    .quiz { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 6px; }
-    button { margin-top: 5px; padding: 6px 12px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .quiz {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+    }
+    button {
+      margin-top: 5px;
+      padding: 6px 12px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
     button:hover { background: #1d4ed8; }
   </style>
 </head>
@@ -17,24 +30,55 @@
 <h2>Quizzes</h2>
 <div id="quiz-list"></div>
 
-<script>
+<script type="module">
 const API = "http://127.0.0.1:8000/api";
-const token = localStorage.getItem("accessToken"); // match login page
+const token = localStorage.getItem("accessToken");
 const params = new URLSearchParams(window.location.search);
-const lessonId = params.get("lesson"); // key must match lessons.html
+const lessonId = params.get("lesson");
 
 if (!token || !lessonId) {
   window.location.href = "index.html";
 }
 
-fetch(`${API}/study/lessons/${lessonId}/`, {
-  headers: { "Authorization": `Bearer ${token}` }
-})
-.then(res => {
-  if (!res.ok) throw new Error("Failed to fetch lesson details");
-  return res.json();
-})
-.then(data => {
+let userCoins = 0;
+
+// -------------------------
+// Load user coin balance
+// -------------------------
+async function loadUserCoins() {
+  const res = await fetch(`${API}/users/me/`, {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+
+  if (!res.ok) {
+    localStorage.removeItem("accessToken");
+    window.location.href = "index.html";
+    return;
+  }
+
+  const data = await res.json();
+  userCoins = data.coins ?? 0;
+}
+
+// -------------------------
+// Load lesson + quizzes
+// -------------------------
+async function loadLesson() {
+  const res = await fetch(`${API}/study/lessons/${lessonId}/`, {
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+
+  if (!res.ok) {
+    alert("Failed to fetch lesson details");
+    return;
+  }
+
+  const data = await res.json();
+
   document.getElementById("lesson-title").textContent = data.title;
   document.getElementById("lesson-content").textContent = data.content;
 
@@ -49,19 +93,38 @@ fetch(`${API}/study/lessons/${lessonId}/`, {
   data.quizzes.forEach(q => {
     const div = document.createElement("div");
     div.className = "quiz";
+
+    const quizType = q.is_premium
+      ? `🔒 Premium Quiz (Cost: ${q.coin_cost} coins)`
+      : "Free Quiz";
+
     div.innerHTML = `
       <p><strong>${q.question}</strong></p>
-      <p>${q.is_premium ? `🔒 Premium Quiz (Cost: ${q.coin_cost} coins)` : "Free Quiz"}</p>
-      <button onclick="startQuiz(${q.id})">Take Quiz</button>
+      <p>${quizType}</p>
+      <button onclick="startQuiz(${q.id}, ${q.is_premium ? q.coin_cost : 0})">
+        Take Quiz
+      </button>
     `;
+
     quizList.appendChild(div);
   });
-})
-.catch(err => alert(err.message));
+}
 
-function startQuiz(quizId) {
+// -------------------------
+function startQuiz(quizId, coinCost) {
+  if (coinCost > userCoins) {
+    alert(
+      `You need ${coinCost} coins to take this quiz.\nYou currently have ${userCoins} coins.`
+    );
+    return;
+  }
+
   window.location.href = `quiz.html?id=${quizId}`;
 }
+
+// Load everything
+await loadUserCoins();
+await loadLesson();
 </script>
 
 </body>

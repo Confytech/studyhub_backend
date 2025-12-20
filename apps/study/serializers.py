@@ -1,4 +1,3 @@
-# apps/study/serializers.py
 from rest_framework import serializers
 from .models import Lesson, Quiz, QuizAttempt
 
@@ -17,18 +16,30 @@ class QuizSerializer(serializers.ModelSerializer):
             "option_d",
             "is_premium",
             "coin_cost",
-            "reward_coins"
+            "reward_coins",
         ]
+
+
+class QuizSubmitSerializer(serializers.Serializer):
+    selected_option = serializers.CharField(max_length=1)
+
 
 class QuizAttemptSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuizAttempt
         fields = ["id", "quiz", "selected_option"]
 
+
 class QuizResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuizAttempt
-        fields = ["quiz", "selected_option", "is_correct", "coins_spent", "reward_coins_earned"]
+        fields = [
+            "quiz",
+            "selected_option",
+            "is_correct",
+            "coins_spent",
+            "reward_coins_earned",
+        ]
 
 # ----------------------------------
 # Lesson serializers
@@ -37,6 +48,7 @@ class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
         fields = ["id", "title", "order"]
+
 
 class LessonDetailSerializer(serializers.ModelSerializer):
     quizzes = QuizSerializer(many=True, read_only=True)

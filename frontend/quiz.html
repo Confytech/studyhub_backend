@@ -1,43 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>StudyHub – Quiz</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f7fa;
-      padding: 20px;
-    }
-    .quiz-box {
-      background: white;
-      padding: 20px;
-      max-width: 600px;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    label {
-      display: block;
-      margin: 8px 0;
-    }
-    button {
-      margin-top: 15px;
-      padding: 10px 16px;
-      border: none;
-      background: #2563eb;
-      color: white;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #1d4ed8;
-    }
-    .correct { color: green; font-weight: bold; }
-    .wrong { color: red; font-weight: bold; }
-    .premium { color: #dc2626; font-weight: bold; }
-  </style>
+<meta charset="UTF-8" />
+<title>StudyHub – Quiz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+body { font-family: Arial; background: #f5f7fa; padding: 20px; }
+.quiz-box { background: white; padding: 20px; max-width: 600px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+label { display: block; margin: 8px 0; }
+button { margin-top: 15px; padding: 10px 16px; border: none; background: #2563eb; color: white; border-radius: 4px; cursor: pointer; }
+button:hover { background: #1d4ed8; }
+.correct { color: green; font-weight: bold; }
+.wrong { color: red; font-weight: bold; }
+.premium { color: #dc2626; font-weight: bold; }
+.reward { color: #16a34a; font-weight: bold; }
+</style>
 </head>
 <body>
 
@@ -63,89 +40,70 @@
 
 <script>
 const API = "http://127.0.0.1:8000/api";
-const accessToken = localStorage.getItem("access_token");
+const token = localStorage.getItem("accessToken");
 const params = new URLSearchParams(window.location.search);
-const quizId = params.get("quiz");
+const quizId = params.get("id");
 
-// 🔐 Auth guard
-if (!accessToken) {
-  window.location.href = "index.html";
-}
+if (!token || !quizId) window.location.href = "index.html";
 
-if (!quizId) {
-  alert("Quiz ID missing");
-  window.location.href = "lessons.html";
-}
-
-// --------------------
-// Load quiz
-// --------------------
 async function loadQuiz() {
-  const res = await fetch(`${API}/study/quizzes/${quizId}/`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`
+  try {
+    const res = await fetch(`${API}/study/quizzes/${quizId}/`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Failed to load quiz");
+    const quiz = await res.json();
+
+    document.getElementById("question").textContent = quiz.question;
+    document.getElementById("a").textContent = quiz.option_a;
+    document.getElementById("b").textContent = quiz.option_b;
+    document.getElementById("c").textContent = quiz.option_c;
+    document.getElementById("d").textContent = quiz.option_d;
+
+    if (quiz.is_premium) {
+      document.getElementById("premium").textContent =
+        `🔒 Premium Quiz – Costs ${quiz.coin_cost} coins`;
+      document.getElementById("premium").className = "premium";
     }
-  });
 
-  if (res.status === 401) {
-    localStorage.removeItem("access_token");
+  } catch {
+    localStorage.removeItem("accessToken");
     window.location.href = "index.html";
-    return;
-  }
-
-  const quiz = await res.json();
-
-  document.getElementById("question").textContent = quiz.question;
-  document.getElementById("a").textContent = quiz.option_a;
-  document.getElementById("b").textContent = quiz.option_b;
-  document.getElementById("c").textContent = quiz.option_c;
-  document.getElementById("d").textContent = quiz.option_d;
-
-  if (quiz.is_premium) {
-    document.getElementById("premium").textContent =
-      `🔒 Premium Quiz – Costs ${quiz.coin_cost} coins`;
-    document.getElementById("premium").className = "premium";
   }
 }
 
 loadQuiz();
 
-// --------------------
-// Submit quiz
-// --------------------
 document.getElementById("quiz-form").addEventListener("submit", async e => {
   e.preventDefault();
 
   const selected = document.querySelector("input[name='option']:checked");
-  if (!selected) {
-    alert("Select an option");
+  if (!selected) { alert("Select an option"); return; }
+
+  const res = await fetch(`${API}/study/quizzes/${quizId}/submit/`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ selected_option: selected.value })
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    alert(err.error || "Failed to submit quiz");
     return;
   }
-
-  const res = await fetch(
-    `${API}/study/quizzes/${quizId}/submit/`,
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        selected_option: selected.value
-      })
-    }
-  );
 
   const data = await res.json();
   const result = document.getElementById("result");
 
   if (data.is_correct) {
-    result.textContent = "✅ Correct!";
-    result.className = "correct";
+    result.innerHTML = `<span class="correct">✅ Correct!</span><br>
+                        <span class="reward">+${data.reward_coins_earned} coins earned</span>`;
   } else {
-    result.textContent = "❌ Wrong!";
-    result.className = "wrong";
+    result.innerHTML = `<span class="wrong">❌ Wrong!</span><br>
+                        <small>Correct answer: ${data.quiz.correct_option}</small>`;
   }
+
+  document.querySelector("button").disabled = true;
 });
 </script>
 
